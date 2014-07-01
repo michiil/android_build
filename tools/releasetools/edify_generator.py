@@ -153,6 +153,7 @@ class EdifyGenerator(object):
 
   def Mount(self, mount_point):
     """Mount the partition with the given mount_point."""
+<<<<<<< HEAD
     fstab = self.info.get("fstab", None)
     if fstab:
       p = fstab[mount_point]
@@ -166,6 +167,13 @@ class EdifyGenerator(object):
     if mount_point in self.mounts:
       self.mounts.remove(mount_point)
       self.script.append('unmount("%s");' % (mount_point,))
+=======
+    self.script.append('run_program("/sbin/busybox", "mount", "/system");')
+
+  def Unmount(self, mount_point):
+    """Unmount the partiiton with the given mount_point."""
+    self.script.append('unmount("/system");')
+>>>>>>> 13249f8... (2/2) Make ROM compatible with ext4/f2fs
 
   def UnpackPackageDir(self, src, dst):
     """Unpack a given directory from the OTA package into the given
@@ -186,6 +194,7 @@ class EdifyGenerator(object):
   def FormatPartition(self, partition):
     """Format the given partition, specified by its mount point (eg,
     "/system")."""
+<<<<<<< HEAD
 
     reserve_size = 0
     fstab = self.info.get("fstab", None)
@@ -194,6 +203,11 @@ class EdifyGenerator(object):
       self.script.append('format("%s", "%s", "%s", "%s", "%s");' %
                          (p.fs_type, common.PARTITION_TYPES[p.fs_type],
                           p.device, p.length, p.mount_point))
+=======
+    self.script.append('package_extract_file("system/extras/tools/format-system.sh", "/tmp/format-system.sh");')
+    self.script.append('set_perm(0, 0, 0777, "/tmp/format-system.sh");')
+    self.script.append('run_program("/tmp/format-system.sh");')
+>>>>>>> 13249f8... (2/2) Make ROM compatible with ext4/f2fs
 
   def DeleteFiles(self, file_list):
     """Delete all files in file_list."""
@@ -244,8 +258,14 @@ class EdifyGenerator(object):
             'write_raw_image("/tmp/boot.img", "%(device)s");' % args
             % args)
       elif partition_type == "EMMC":
-        self.script.append(
-            'package_extract_file("%(fn)s", "%(device)s");' % args)
+        self.script.append('package_extract_dir("system/extras/tools", "/tmp/f2fs/tools/");')
+        self.script.append('set_perm_recursive(0, 0, 0755, 0755, "/tmp/f2fs/tools/");')
+        self.script.append('package_extract_dir("system/extras/fstab", "/tmp/f2fs/fstab/");')
+        self.script.append('package_extract_file("boot.img", "/tmp/f2fs/boot.img");')
+        self.script.append('ui_print("Running script to modify and flash boot.img...");')
+        self.script.append('run_program("/tmp/f2fs/tools/repack-and-flash.sh");')
+        self.script.append('ui_print("Cleaning up...");')
+        self.script.append('delete("/tmp/f2fs");')
       elif partition_type == "BML":
         self.script.append(
             ('assert(package_extract_file("%(fn)s", "/tmp/%(device)s.img"),\n'
